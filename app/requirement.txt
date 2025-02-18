@@ -1,0 +1,13 @@
+fastapi==0.95.0                # FastAPI framework for building APIs
+uvicorn==0.21.0                # ASGI server for serving FastAPI apps
+sqlalchemy==2.0.15             # SQLAlchemy ORM for database interaction
+aiosqlite==0.17.0              # Async support for SQLite in SQLAlchemy
+pydantic==1.10.9               # Data validation and settings management
+scikit-learn==1.2.0            # Machine learning library for models like LSTM
+tensorflow==2.11.0             # Deep learning framework for building neural networks
+numpy==1.24.1                  # NumPy for numerical computations
+matplotlib==3.7.1              # Plotting library for generating graphs
+python-dotenv==1.0.0           # To load environment variables (if needed)
+pandas==1.5.3                  # Pandas for data manipulation and analysis
+keras==2.11.0                  # Keras library for building neural networks (part of TensorFlow)
+pickle5==0.0.11                # For using pickle in case of backward compatibility with Python versions

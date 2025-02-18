@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Predictor</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f7fc;
+            color: #333;
+            padding: 20px;
+            margin: 0;
+            box-sizing: border-box;
+        }
+        h1 {
+            text-align: center;
+            font-size: 48px;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(to right, #2196F3, #00bcd4); /* Blue gradient for heading */
+            padding: 30px;
+            margin-bottom: 40px;
+            border-radius: 10px;
+            text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.3);
+        }
+        .container {
+            margin: 20px 0;
+            background-color: #ffffff;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .container h3 {
+            margin-bottom: 10px;
+            color: #2196F3; /* Blue color for section titles */
+            font-size: 24px;
+        }
+        .container label {
+            margin-right: 10px;
+            color: #555;
+        }
+        .container input {
+            margin: 10px 0;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            width: 100%;
+            box-sizing: border-box;
+            transition: border-color 0.3s ease;
+        }
+        .container input:focus {
+            border-color: #2196F3;
+            outline: none;
+        }
+        .container button {
+            padding: 12px 20px;
+            background-color: #2196F3; /* Blue button */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .container button:hover {
+            background-color: #1976D2; /* Darker blue when hovered */
+            transform: translateY(-2px);
+        }
+        .container button:disabled {
+            background-color: #B0BEC5;
+            cursor: not-allowed;
+        }
+        .message {
+            font-size: 16px;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .loading {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        /* Plot Image Styling */
+        #plot_image {
+            max-width: 100%;
+            max-height: 500px;
+            margin-top: 20px;
+            border-radius: 8px;
+            border: 2px solid #2196F3;
+            padding: 10px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+            object-fit: contain;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        /* Loading spinner for plot */
+        #plot_image.loading {
+            background-image: url('https://i.gifer.com/7pUw.gif');
+            background-size: 50px;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            input, button {
+                width: 100%;
+            }
+        }
+    </style>
+    <script>
+        // Function to display messages
+        function showMessage(message, type) {
+            let messageDiv = document.getElementById("message");
+            messageDiv.innerHTML = message;
+            messageDiv.className = 'message ' + type;
+            messageDiv.style.display = 'block';
+        }
+
+        // Function to train the model
+        async function trainModel() {
+            let epochs = document.getElementById("epochs").value;
+            let batch_size = document.getElementById("batch_size").value;
+            let button = document.getElementById("train_button");
+            button.disabled = true;
+            showMessage("Training model... Please wait.", "loading");
+
+            try {
+                const response = await fetch('/train_model', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        epochs: epochs,
+                        batch_size: batch_size
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    showMessage("Model trained successfully!", "success");
+                } else {
+                    showMessage(result.message || "We are facing an issue.", "error");
+                }
+            } catch (error) {
+                showMessage("Error occurred while training the model.", "error");
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        // Function to get stock prediction
+        async function getPrediction() {
+            let lastValues = document.getElementById("last_values").value.split(',').map(Number);
+            let button = document.getElementById("predict_button");
+            button.disabled = true;
+            showMessage("Getting prediction... Please wait.", "loading");
+
+            try {
+                const response = await fetch('/predict_stock_price', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        last_values: lastValues
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    document.getElementById("predicted_price").innerText = `Predicted Stock Price: $${result.predicted_stock_price}`;
+                    showMessage("Prediction fetched successfully.", "success");
+                } else {
+                    showMessage(result.message || "We are facing an issue.", "error");
+                }
+            } catch (error) {
+                showMessage("Error occurred while getting the prediction.", "error");
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        // Function to generate and display the plot
+        async function generatePlot() {
+            let button = document.getElementById("generate_plot_button");
+            button.disabled = true;
+            showMessage("Generating plot... Please wait.", "loading");
+
+            let plotImage = document.getElementById("plot_image");
+            plotImage.style.display = 'none';
+            plotImage.classList.add('loading');
+
+            try {
+                const response = await fetch('/generate_plot');
+                const result = await response.json();
+                if (response.ok) {
+                    plotImage.src = result.plot_url;
+                    plotImage.style.display = 'block';
+                    plotImage.classList.remove('loading');
+                    showMessage("Plot generated successfully.", "success");
+                } else {
+                    showMessage(result.message || "We are facing an issue.", "error");
+                }
+            } catch (error) {
+                showMessage("Error occurred while generating the plot.", "error");
+                plotImage.classList.remove('loading');
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        // Function to fetch model metrics
+        async function fetchModelMetrics() {
+            let button = document.getElementById("metrics_button");
+            button.disabled = true;
+            showMessage("Fetching model metrics... Please wait.", "loading");
+
+            try {
+                const response = await fetch('/model_metrics');
+                const result = await response.json();
+                if (response.ok) {
+                    document.getElementById("train_rmse").innerText = `Train RMSE: ${result.trainRMSE}`;
+                    document.getElementById("test_rmse").innerText = `Test RMSE: ${result.testRMSE}`;
+                    showMessage("Model metrics fetched successfully.", "success");
+                } else {
+                    showMessage(result.message || "We are facing an issue.", "error");
+                }
+            } catch (error) {
+                showMessage("Error occurred while fetching the model metrics.", "error");
+            } finally {
+                button.disabled = false;
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Stock Price Predictor</h1>
+
+    <!-- Message Display -->
+    <div id="message" class="message" style="display:none;"></div>
+
+    <!-- Model Training Form -->
+    <div class="container">
+        <h3>Train the Model</h3>
+        <label for="epochs">Epochs:</label>
+        <input type="number" id="epochs" value="5">
+        <label for="batch_size">Batch Size:</label>
+        <input type="number" id="batch_size" value="1">
+        <button id="train_button" onclick="trainModel()">Train Model</button>
+    </div>
+
+    <hr>
+
+    <!-- Stock Prediction Form -->
+    <div class="container">
+        <h3>Predict Stock Price</h3>
+        <label for="last_values">Last Values (comma separated):</label>
+        <input type="text" id="last_values" placeholder="e.g. 150,152,154">
+        <button id="predict_button" onclick="getPrediction()">Get Prediction</button>
+        <p id="predicted_price"></p>
+    </div>
+
+    <hr>
+
+    <!-- Model Metrics -->
+    <div class="container">
+        <h3>Model Metrics</h3>
+        <button id="metrics_button" onclick="fetchModelMetrics()">Get Model Metrics</button>
+        <p id="train_rmse"></p>
+        <p id="test_rmse"></p>
+    </div>
+
+    <hr>
+
+    <!-- Plot Generation -->
+    <div class="container">
+        <h3>Generate Plot</h3>
+        <button id="generate_plot_button" onclick="generatePlot()">Generate Plot</button>
+        <div id="plot_container" style="position: relative; width: 100%; height: 100%;">
+            <img id="plot_image" src="" alt="Generated Plot" style="display: none;">
+        </div>
+    </div>
+</body>
+</html>
